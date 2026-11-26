@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Golden Glow – Menu zabiegowe</title>
+<style>
+:root{--bg:#e9e1d8;--sand:#ddd5ce;--btn:#4a4036;--btnt:#fff7ef;--ink:#4a4036;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--w:min(94vw,calc((100vh - 120px)*.707),680px);--w:min(94vw,calc((100dvh - 120px)*.707),680px)}
+@media (min-width:800px){:root{--w:min(47vw,calc((100vh - 120px)*.707),680px);--w:min(47vw,calc((100dvh - 120px)*.707),680px)}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1814;--btn:#b8975a;--btnt:#1c1814;--ink:#d9cfc4}}
+:root[data-theme="dark"]{--bg:#1c1814;--btn:#b8975a;--btnt:#1c1814;--ink:#d9cfc4}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.book{position:relative;width:var(--w);aspect-ratio:1414/2000;perspective:2200px;touch-action:pan-y;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 14px 22px rgba(0,0,0,.3));transform:translateX(var(--sx,0px));transition:transform .95s cubic-bezier(.45,.05,.25,1)}
+.book.drag{transition:none}
+.leaf{position:absolute;inset:0;transform-origin:left center;transform-style:preserve-3d;transition:transform .95s cubic-bezier(.45,.05,.25,1)}
+.leaf.flipped{transform:rotateY(-180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:#fff7ef;border-radius:2px 8px 8px 2px;overflow:hidden}
+.face img{width:100%;height:100%;display:block;pointer-events:none;-webkit-user-drag:none}
+.face::after{content:"";position:absolute;inset:0 auto 0 0;width:5%;background:linear-gradient(90deg,rgba(74,64,54,.18),transparent);pointer-events:none}
+.back{transform:rotateY(180deg);background:linear-gradient(270deg,rgba(74,64,54,.2),transparent 7%),#fff7ef}
+.bar{display:flex;align-items:center;gap:18px;font-size:14px;letter-spacing:.12em}
+.bar button{width:46px;height:46px;border-radius:50%;border:0;background:var(--btn);color:var(--btnt);font-size:22px;cursor:pointer;transition:opacity .2s}
+.bar button:disabled{opacity:.25;cursor:default}
+#cnt{min-width:64px;text-align:center}
+</style>
+</head>
+<body>
+<div class="book" id="book"></div>
+<div class="bar"><button id="pv" aria-label="Poprzednia strona">‹</button><span id="cnt"></span><button id="nx" aria-label="Następna strona">›</button></div>
+<script>
+const IMGS=["img/01.webp", "img/02.webp", "img/03.webp", "img/04.webp", "img/05.webp", "img/06.webp", "img/07.webp", "img/08.webp", "img/09.webp", "img/10.webp", "img/11.webp", "img/12.webp", "img/13.webp", "img/14.webp", "img/15.webp", "img/16.webp", "img/17.webp", "img/18.webp", "img/19.webp", "img/20.webp", "img/21.webp", "img/22.webp", "img/23.webp", "img/24.webp", "img/25.webp", "img/26.webp", "img/27.webp", "img/28.webp", "img/29.webp", "img/30.webp", "img/31.webp", "img/32.webp", "img/33.webp", "img/34.webp", "img/35.webp", "img/36.webp", "img/37.webp", "img/38.webp", "img/39.webp"];
+const N=IMGS.length,book=document.getElementById('book'),cnt=document.getElementById('cnt'),pv=document.getElementById('pv'),nx=document.getElementById('nx');
+let cur=0;
+const leaves=IMGS.map((s,i)=>{
+ const l=document.createElement('div');l.className='leaf';l._f=false;l.style.zIndex=N-i;
+ l.innerHTML=`<div class="face"><img src="${s}" alt="Strona ${i+1}" decoding="async"></div><div class="face back"></div>`;
+ book.appendChild(l);return l;
+});
+function settle(i){const l=leaves[i];l.style.zIndex=l._f?i:N-i}
+function render(){
+ leaves.forEach((l,i)=>{
+  const f=i<cur;
+  if(f!==l._f){
+   l._f=f;l.style.zIndex=N+2;l.classList.toggle('flipped',f);
+   clearTimeout(l._t);l._t=setTimeout(()=>settle(i),980);
+  }
+ });
+ book.style.setProperty('--sx',(cur>0&&innerWidth>=800)?book.offsetWidth/2+'px':'0px');
+ cnt.textContent=(cur+1)+' / '+N;
+ pv.disabled=cur===0;nx.disabled=cur>=N-1;
+}
+function next(){if(cur<N-1){cur++;render()}}
+function prev(){if(cur>0){cur--;render()}}
+nx.onclick=next;pv.onclick=prev;
+addEventListener('resize',render);
+addEventListener('keydown',e=>{if(e.key==='ArrowRight')next();if(e.key==='ArrowLeft')prev()});
+let sx=null,sy=0,dl=null,dir=0,di=0,pr=0;
+book.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;dl=null});
+book.addEventListener('pointermove',e=>{
+ if(sx===null)return;
+ const dx=e.clientX-sx;
+ if(!dl){
+  if(Math.abs(dx)<10)return;
+  if(Math.abs(e.clientY-sy)>Math.abs(dx)){sx=null;return}
+  dir=dx<0?1:-1;di=dir===1?cur:cur-1;
+  if(di<0||di>=N-1){sx=null;return}
+  dl=leaves[di];dl.style.transition='none';dl.style.zIndex=N+2;
+  try{book.setPointerCapture(e.pointerId)}catch(_){}
+ }
+ pr=Math.max(0,Math.min(1,(dir===1?-dx:dx)/(book.offsetWidth*.8)));
+ dl.style.transform='rotateY('+(dir===1?-180*pr:-180+180*pr)+'deg)';
+});
+function end(){
+ if(!dl){sx=null;return}
+ const l=dl,i=di;dl=null;sx=null;
+ l.style.transition='';void l.offsetWidth;l.style.transform='';
+ if(pr>.2){cur+=dir;render()}else{clearTimeout(l._t);l._t=setTimeout(()=>settle(i),980)}
+}
+book.addEventListener('pointerup',end);
+book.addEventListener('pointercancel',end);
+render();
+</script>
+</body>
+</html>
